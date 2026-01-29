@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#1F2937',
+                        accent: '#10B981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-blue-400">Painel Administrativo</h1>
+                <div class="flex items-center space-x-4">
+                    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Dashboard Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Total de Vendas</p>
+                        <p id="totalSales" class="text-2xl font-bold text-green-400">R$ 0,00</p>
+                    </div>
+                    <div class="text-3xl">💰</div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Pedidos Pendentes</p>
+                        <p id="pendingOrders" class="text-2xl font-bold text-yellow-400">0</p>
+                    </div>
+                    <div class="text-3xl">📋</div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Total de Clientes</p>
+                        <p id="totalCustomers" class="text-2xl font-bold text-blue-400">0</p>
+                    </div>
+                    <div class="text-3xl">👥</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Table -->
+        <div class="bg-gray-800 rounded-lg shadow-lg mb-8">
+            <div class="p-6 border-b border-gray-700">
+                <h2 class="text-xl font-semibold">Vendas Recentes</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID Pedido</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cliente</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Produtos</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Valor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody" class="divide-y divide-gray-700">
+                        <!-- Sales data will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Inventory Management -->
+        <div class="bg-gray-800 rounded-lg shadow-lg">
+            <div class="p-6 border-b border-gray-700">
+                <h2 class="text-xl font-semibold">Gestão de Estoque</h2>
+            </div>
+            <div class="p-6">
+                <div id="inventoryList" class="space-y-4">
+                    <!-- Inventory items will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-gray-800 rounded-lg max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Editar Produto</h2>
+                        <button id="closeEditModal" class="text-gray-400 hover:text-white">✕</button>
+                    </div>
+
+                    <form id="editProductForm" class="space-y-4">
+                        <input type="hidden" id="editProductId">
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Nome</label>
+                            <input type="text" id="editProductName" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Preço (R$)</label>
+                            <input type="number" id="editProductPrice" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Estoque</label>
+                            <input type="number" id="editProductStock" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 py-2 rounded-lg font-semibold transition-colors">
+                                Salvar
+                            </button>
+                            <button type="button" id="cancelEdit" class="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded-lg font-semibold transition-colors">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let sales = [];
+        let products = [];
+        let currentUser = null;
+
+        // DOM elements
+        const totalSales = document.getElementById('totalSales');
+        const pendingOrders = document.getElementById('pendingOrders');
+        const totalCustomers = document.getElementById('totalCustomers');
+        const salesTableBody = document.getElementById('salesTableBody');
+        const inventoryList = document.getElementById('inventoryList');
+        const editModal = document.getElementById('editModal');
+        const editProductForm = document.getElementById('editProductForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const closeEditModal = document.getElementById('closeEditModal');
+        const cancelEdit = document.getElementById('cancelEdit');
+
+        // Initialize admin panel
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAdminAuth();
+            loadDashboardData();
+            loadSalesData();
+            loadInventoryData();
+            setupEventListeners();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            logoutBtn.addEventListener('click', handleLogout);
+            closeEditModal.addEventListener('click', closeEditModalFunc);
+            cancelEdit.addEventListener('click', closeEditModalFunc);
+            editProductForm.addEventListener('submit', handleEditProduct);
+
+            // Close modal when clicking outside
+            editModal.addEventListener('click', (e) => {
+                if (e.target === editModal) closeEditModalFunc();
+            });
+        }
+
+        // Check admin authentication
+        function checkAdminAuth() {
+            // TODO: Check if admin user is logged in
+            // For now, assume admin is logged in
+            currentUser = { role: 'admin', token: 'mock-admin-token' };
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // TODO: Replace with your FastAPI URL and include JWT token
+                // const response = await fetch('http://localhost:8000/admin/dashboard', {
+                //     headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                // });
+                // const data = await response.json();
+
+                // Mock dashboard data
+                const mockData = {
+                    total_sales: 15450.75,
+                    pending_orders: 8,
+                    total_customers: 127
+                };
+
+                totalSales.textContent = `R$ ${mockData.total_sales.toFixed(2)}`;
+                pendingOrders.textContent = mockData.pending_orders;
+                totalCustomers.textContent = mockData.total_customers;
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Load sales data
+        async function loadSalesData() {
+            try {
+                // TODO: Replace with your FastAPI URL and include JWT token
+                // const response = await fetch('http://localhost:8000/admin/orders', {
+                //     headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                // });
+                // const data = await response.json();
+
+                // Mock sales data
+                const mockSales = [
+                    {
+                        id: 1,
+                        user: { full_name: 'João Silva' },
+                        items: [{ product: { name: 'Produto 1' }, quantity: 2 }],
+                        total_amount: 59.98,
+                        status: 'paid'
+                    },
+                    {
+                        id: 2,
+                        user: { full_name: 'Maria Santos' },
+                        items: [{ product: { name: 'Produto 2' }, quantity: 1 }],
+                        total_amount: 49.99,
+                        status: 'pending_payment'
+                    },
+                    {
+                        id: 3,
+                        user: { full_name: 'Pedro Oliveira' },
+                        items: [{ product: { name: 'Produto 3' }, quantity: 3 }],
+                        total_amount: 59.97,
+                        status: 'shipped'
+                    }
+                ];
+
+                sales = mockSales;
+                renderSalesTable();
+            } catch (error) {
+                console.error('Error loading sales data:', error);
+                salesTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-red-400">Erro ao carregar vendas</td></tr>';
+            }
+        }
+
+        // Render sales table
+        function renderSalesTable() {
+            salesTableBody.innerHTML = sales.map(sale => {
+                const statusConfig = {
+                    pending_payment: { badge: 'bg-yellow-500', text: 'Pendente' },
+                    paid: { badge: 'bg-green-500', text: 'Pago' },
+                    shipped: { badge: 'bg-blue-500', text: 'Enviado' },
+                    delivered: { badge: 'bg-purple-500', text: 'Entregue' }
+                };
+
+                const config = statusConfig[sale.status] || { badge: 'bg-gray-500', text: 'Desconhecido' };
+                const productsText = sale.items.map(item => `${item.product.name} (${item.quantity}x)`).join(', ');
+
+                return `
+                    <tr class="hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">#${sale.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${sale.user.full_name}</td>
+                        <td class="px-6 py-4 text-sm">${productsText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">R$ ${sale.total_amount.toFixed(2)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${config.badge} text-white">
+                                ${config.text}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <button onclick="updateOrderStatus(${sale.id}, 'paid')"
+                                    class="text-blue-400 hover:text-blue-300 mr-2 ${sale.status === 'paid' ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    ${sale.status === 'paid' ? 'disabled' : ''}>
+                                Marcar Pago
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Load inventory data
+        async function loadInventoryData() {
+            try {
+                // TODO: Replace with your FastAPI URL and include JWT token
+                // const response = await fetch('http://localhost:8000/products', {
+                //     headers: { 'Authorization': `Bearer ${currentUser.token}` }
+                // });
+                // const data = await response.json();
+
+                // Mock inventory data
+                const mockProducts = [
+                    { id: 1, name: 'Produto 1', price: 29.99, stock_quantity: 10 },
+                    { id: 2, name: 'Produto 2', price: 49.99, stock_quantity: 5 },
+                    { id: 3, name: 'Produto 3', price: 19.99, stock_quantity: 20 },
+                    { id: 4, name: 'Produto 4', price: 99.99, stock_quantity: 3 }
+                ];
+
+                products = mockProducts;
+                renderInventory();
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                inventoryList.innerHTML = '<p class="text-red-400">Erro ao carregar estoque</p>';
+            }
+        }
+
+        // Render inventory list
+        function renderInventory() {
+            inventoryList.innerHTML = products.map(product => `
+                <div class="flex items-center justify-between bg-gray-700 rounded-lg p-4">
+                    <div class="flex-1">
+                        <h3 class="font-semibold">${product.name}</h3>
+                        <p class="text-sm text-gray-400">Preço: R$ ${product.price.toFixed(2)} | Estoque: ${product.stock_quantity}</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="editProduct(${product.id})"
+                                class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm transition-colors">
+                            Editar
+                        </button>
+                        <button onclick="addStock(${product.id})"
+                                class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm transition-colors">
+                            + Estoque
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Edit product
+        function editProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            document.getElementById('editProductId').value = product.id;
+            document.getElementById('editProductName').value = product.name;
+            document.getElementById('editProductPrice').value = product.price;
+            document.getElementById('editProductStock').value = product.stock_quantity;
+
+            editModal.classList.remove('hidden');
+        }
+
+        // Handle edit product form submission
+        async function handleEditProduct(e) {
+            e.preventDefault();
+
+            const productId = document.getElementById('editProductId').value;
+            const name = document.getElementById('editProductName').value;
+            const price = parseFloat(document.getElementById('editProductPrice').value);
+            const stock = parseInt(document.getElementById('editProductStock').value);
+
+            try {
+                // TODO: Replace with your FastAPI URL and include JWT token
+                // const response = await fetch(`http://localhost:8000/products/${productId}`, {
+                //     method: 'PUT',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         'Authorization': `Bearer ${currentUser.token}`
+                //     },
+                //     body: JSON.stringify({
+                //         name: name,
+                //         price: price,
+                //         stock_quantity: stock
+                //     })
+                // });
+
+                // Mock update
+                const product = products.find(p => p.id == productId);
+                if (product) {
+                    product.name = name;
+                    product.price = price;
+                    product.stock_quantity = stock;
+                    renderInventory();
+                    closeEditModalFunc();
+                    alert('Produto atualizado com sucesso!');
+                }
+            } catch (error) {
+                console.error('Error updating product:', error);
+                alert('Erro ao atualizar produto');
+            }
+        }
+
+        // Add stock to product
+        function addStock(productId) {
+            const quantity = parseInt(prompt('Quantidade a adicionar:'));
+            if (!quantity || quantity <= 0) return;
+
+            // TODO: Implement API call to add stock
+            const product = products.find(p => p.id == productId);
+            if (product) {
+                product.stock_quantity += quantity;
+                renderInventory();
+                alert(`Estoque adicionado! Novo total: ${product.stock_quantity}`);
+            }
+        }
+
+        // Update order status
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                // TODO: Replace with your FastAPI URL and include JWT token
+                // const response = await fetch(`http://localhost:8000/admin/orders/${orderId}/status`, {
+                //     method: 'PUT',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         'Authorization': `Bearer ${currentUser.token}`
+                //     },
+                //     body: JSON.stringify({ status: newStatus })
+                // });
+
+                // Mock update
+                const sale = sales.find(s => s.id == orderId);
+                if (sale) {
+                    sale.status = newStatus;
+                    renderSalesTable();
+                    loadDashboardData(); // Refresh dashboard numbers
+                    alert('Status do pedido atualizado!');
+                }
+            } catch (error) {
+                console.error('Error updating order status:', error);
+                alert('Erro ao atualizar status do pedido');
+            }
+        }
+
+        // Close edit modal
+        function closeEditModalFunc() {
+            editModal.classList.add('hidden');
+            editProductForm.reset();
+        }
+
+        // Handle logout
+        function handleLogout() {
+            // TODO: Clear authentication tokens
+            currentUser = null;
+            window.location.href = 'user.html'; // Redirect to user page
+        }
+    </script>
+</body>
+</html>

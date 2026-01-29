@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loja E-commerce</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#1F2937',
+                        accent: '#10B981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-blue-400">E-commerce Store</h1>
+                <div class="flex items-center space-x-4">
+                    <button id="cartBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors">
+                        🛒 Carrinho (<span id="cartCount">0</span>)
+                    </button>
+                    <button id="loginBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors">
+                        Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Products Grid -->
+        <div id="productsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+            <!-- Products will be loaded here -->
+        </div>
+
+        <!-- Order Status -->
+        <div id="orderStatus" class="bg-gray-800 rounded-lg p-6 mb-8 hidden">
+            <h2 class="text-xl font-semibold mb-4">Status do Pedido</h2>
+            <div class="flex items-center space-x-2">
+                <div id="statusBadge" class="px-3 py-1 rounded-full text-sm font-medium"></div>
+                <span id="statusText"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Modal -->
+    <div id="cartModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-gray-800 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Carrinho</h2>
+                        <button id="closeCart" class="text-gray-400 hover:text-white">✕</button>
+                    </div>
+
+                    <div id="cartItems" class="space-y-4 mb-4">
+                        <!-- Cart items will be loaded here -->
+                    </div>
+
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-lg font-semibold">Total:</span>
+                            <span id="cartTotal" class="text-xl font-bold text-green-400">R$ 0,00</span>
+                        </div>
+
+                        <button id="checkoutBtn" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            Finalizar Compra
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let products = [];
+        let cart = [];
+        let currentUser = null;
+        let currentOrder = null;
+
+        // DOM elements
+        const productsGrid = document.getElementById('productsGrid');
+        const cartModal = document.getElementById('cartModal');
+        const cartItems = document.getElementById('cartItems');
+        const cartTotal = document.getElementById('cartTotal');
+        const cartCount = document.getElementById('cartCount');
+        const cartBtn = document.getElementById('cartBtn');
+        const closeCart = document.getElementById('closeCart');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        const loginBtn = document.getElementById('loginBtn');
+        const orderStatus = document.getElementById('orderStatus');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+            setupEventListeners();
+            checkAuthStatus();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            cartBtn.addEventListener('click', toggleCart);
+            closeCart.addEventListener('click', toggleCart);
+            checkoutBtn.addEventListener('click', handleCheckout);
+            loginBtn.addEventListener('click', handleLogin);
+
+            // Close modal when clicking outside
+            cartModal.addEventListener('click', (e) => {
+                if (e.target === cartModal) toggleCart();
+            });
+        }
+
+        // Load products from API
+        async function loadProducts() {
+            try {
+                // TODO: Replace with your FastAPI URL
+                // const response = await fetch('http://localhost:8000/products');
+                // const data = await response.json();
+
+                // Mock data for demonstration
+                const mockProducts = [
+                    { id: 1, name: 'Produto 1', price: 29.99, stock_quantity: 10, description: 'Descrição do produto 1' },
+                    { id: 2, name: 'Produto 2', price: 49.99, stock_quantity: 5, description: 'Descrição do produto 2' },
+                    { id: 3, name: 'Produto 3', price: 19.99, stock_quantity: 20, description: 'Descrição do produto 3' },
+                    { id: 4, name: 'Produto 4', price: 99.99, stock_quantity: 3, description: 'Descrição do produto 4' }
+                ];
+
+                products = mockProducts;
+                renderProducts();
+            } catch (error) {
+                console.error('Error loading products:', error);
+                productsGrid.innerHTML = '<p class="text-red-400">Erro ao carregar produtos</p>';
+            }
+        }
+
+        // Render products grid
+        function renderProducts() {
+            productsGrid.innerHTML = products.map(product => `
+                <div class="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="h-48 bg-gray-700 flex items-center justify-center">
+                        <span class="text-4xl">📦</span>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-2">${product.name}</h3>
+                        <p class="text-gray-400 text-sm mb-3">${product.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-green-400 font-bold text-xl">R$ ${product.price.toFixed(2)}</span>
+                            <span class="text-sm text-gray-400">Estoque: ${product.stock_quantity}</span>
+                        </div>
+                        <button onclick="addToCart(${product.id})"
+                                class="w-full mt-3 bg-blue-600 hover:bg-blue-700 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                ${product.stock_quantity === 0 ? 'disabled' : ''}>
+                            ${product.stock_quantity === 0 ? 'Esgotado' : 'Adicionar ao Carrinho'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add product to cart
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || product.stock_quantity === 0) return;
+
+            const existingItem = cart.find(item => item.product_id === productId);
+            if (existingItem) {
+                if (existingItem.quantity < product.stock_quantity) {
+                    existingItem.quantity++;
+                }
+            } else {
+                cart.push({
+                    product_id: product.id,
+                    quantity: 1,
+                    unit_price: product.price,
+                    total_price: product.price,
+                    product: product
+                });
+            }
+
+            updateCartDisplay();
+        }
+
+        // Update cart display
+        function updateCartDisplay() {
+            cartCount.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+            if (cart.length === 0) {
+                cartItems.innerHTML = '<p class="text-gray-400 text-center py-4">Carrinho vazio</p>';
+                cartTotal.textContent = 'R$ 0,00';
+                checkoutBtn.disabled = true;
+                return;
+            }
+
+            cartItems.innerHTML = cart.map((item, index) => `
+                <div class="flex items-center justify-between bg-gray-700 rounded-lg p-3">
+                    <div class="flex-1">
+                        <h4 class="font-semibold">${item.product.name}</h4>
+                        <p class="text-sm text-gray-400">R$ ${item.unit_price.toFixed(2)} x ${item.quantity}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateQuantity(${index}, -1)"
+                                class="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">-</button>
+                        <span class="w-8 text-center">${item.quantity}</span>
+                        <button onclick="updateQuantity(${index}, 1)"
+                                class="bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">+</button>
+                        <button onclick="removeFromCart(${index})"
+                                class="text-red-400 hover:text-red-300 ml-2">✕</button>
+                    </div>
+                </div>
+            `).join('');
+
+            const total = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+            cartTotal.textContent = `R$ ${total.toFixed(2)}`;
+            checkoutBtn.disabled = false;
+        }
+
+        // Update item quantity
+        function updateQuantity(index, change) {
+            const item = cart[index];
+            const newQuantity = item.quantity + change;
+
+            if (newQuantity <= 0) {
+                removeFromCart(index);
+                return;
+            }
+
+            if (newQuantity > item.product.stock_quantity) return;
+
+            item.quantity = newQuantity;
+            item.total_price = item.unit_price * newQuantity;
+            updateCartDisplay();
+        }
+
+        // Remove item from cart
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartDisplay();
+        }
+
+        // Toggle cart modal
+        function toggleCart() {
+            cartModal.classList.toggle('hidden');
+        }
+
+        // Handle checkout
+        async function handleCheckout() {
+            if (!currentUser) {
+                alert('Você precisa fazer login para finalizar a compra');
+                return;
+            }
+
+            if (cart.length === 0) return;
+
+            try {
+                // TODO: Replace with your FastAPI URL and include JWT token in Authorization header
+                // const response = await fetch('http://localhost:8000/orders', {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         'Authorization': `Bearer ${currentUser.token}`
+                //     },
+                //     body: JSON.stringify({
+                //         items: cart.map(item => ({
+                //             product_id: item.product_id,
+                //             quantity: item.quantity
+                //         }))
+                //     })
+                // });
+
+                // if (response.ok) {
+                //     const order = await response.json();
+                //     currentOrder = order;
+                //     showOrderStatus(order);
+                //     cart = [];
+                //     updateCartDisplay();
+                //     toggleCart();
+                // } else {
+                //     throw new Error('Erro ao processar pedido');
+                // }
+
+                // Mock checkout for demonstration
+                const mockOrder = {
+                    id: Date.now(),
+                    status: 'pending_payment',
+                    total_amount: cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0)
+                };
+
+                currentOrder = mockOrder;
+                showOrderStatus(mockOrder);
+                cart = [];
+                updateCartDisplay();
+                toggleCart();
+
+                alert('Pedido criado com sucesso! Status: Aguardando Pagamento');
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('Erro ao processar pedido. Tente novamente.');
+            }
+        }
+
+        // Show order status
+        function showOrderStatus(order) {
+            orderStatus.classList.remove('hidden');
+
+            const statusConfig = {
+                pending_payment: { badge: 'bg-yellow-500', text: 'Aguardando Pagamento' },
+                paid: { badge: 'bg-green-500', text: 'Pago' },
+                shipped: { badge: 'bg-blue-500', text: 'Enviado' },
+                delivered: { badge: 'bg-purple-500', text: 'Entregue' }
+            };
+
+            const config = statusConfig[order.status] || { badge: 'bg-gray-500', text: 'Status Desconhecido' };
+
+            statusBadge.className = `px-3 py-1 rounded-full text-sm font-medium ${config.badge}`;
+            statusBadge.textContent = config.text;
+            statusText.textContent = `Pedido #${order.id} - Total: R$ ${order.total_amount.toFixed(2)}`;
+        }
+
+        // Handle login (simplified)
+        function handleLogin() {
+            // TODO: Implement proper login modal/form
+            const email = prompt('Email:');
+            const password = prompt('Senha:');
+
+            if (email && password) {
+                // TODO: Replace with actual login API call
+                // const response = await fetch('http://localhost:8000/token', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                //     body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+                // });
+
+                // Mock login
+                currentUser = { email, token: 'mock-jwt-token' };
+                loginBtn.textContent = `Olá, ${email.split('@')[0]}`;
+                loginBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                loginBtn.classList.add('bg-gray-600');
+            }
+        }
+
+        // Check authentication status
+        function checkAuthStatus() {
+            // TODO: Check if user is already logged in (e.g., from localStorage)
+            // For now, assume not logged in
+        }
+    </script>
+</body>
+</html>
