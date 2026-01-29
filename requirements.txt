@@ -1,8 +1,10 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-sqlalchemy==2.0.23
-sqlmodel==0.0.14
-psycopg2-binary==2.9.9  # For PostgreSQL, remove if using SQLite
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
+fastapi
+uvicorn
+sqlalchemy
+sqlmodel
+psycopg2-binary
+asyncpg
+aiosqlite
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
